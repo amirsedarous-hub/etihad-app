@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.vscode/
+venv/
+.venv/
+__pycache__/
+*.db
+*.sqlite3
+
+*.pdf
+venv/
+.venv/
+__pycache__/
+*.db
+*.sqlite3

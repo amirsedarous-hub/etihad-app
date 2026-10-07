@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة التحكم الرئيسية | اتحاد الشاغلين{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1">لوحة المتابعة العامة</h4>
+        <p class="text-muted small mb-0">نظرة عامة على العقارات، الخزائن، والمؤشرات الشهرية</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-modern" data-bs-toggle="modal" data-bs-target="#addBuildingModal">
+            <i class="bi bi-building-add"></i> إضافة عقار جديد
+        </button>
+        <button class="btn btn-success btn-modern" data-bs-toggle="modal" data-bs-target="#addTreasuryModal">
+            <i class="bi bi-wallet-plus"></i> إضافة خزينة
+        </button>
+    </div>
+</div>
+
+<!-- كروت الإحصائيات العلوية -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold">تحصيلات الشهر</span>
+                    <h4 class="fw-bold mt-2 mb-0 text-success">{{ month_collections }} ج.م</h4>
+                </div>
+                <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-cash-stack"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold">مصروفات الشهر</span>
+                    <h4 class="fw-bold mt-2 mb-0 text-danger">{{ month_expenses }} ج.م</h4>
+                </div>
+                <div class="stat-icon bg-danger-subtle text-danger"><i class="bi bi-arrow-down-left-circle"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold">رصيد الخزائن الكلي</span>
+                    <h4 class="fw-bold mt-2 mb-0 text-primary">{{ total_balance }} ج.م</h4>
+                </div>
+                <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-safe2"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-bold">إجمالي المتأخرات</span>
+                    <h4 class="fw-bold mt-2 mb-0 text-warning">{{ grand_debt }} ج.م</h4>
+                </div>
+                <div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-exclamation-triangle"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- جداول العرض -->
+<div class="row g-4">
+    <div class="col-12 col-lg-6">
+        <div class="card card-stat h-100">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-buildings me-2"></i>العقارات المسجلة</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>اسم العقار</th>
+                            <th>النوع</th>
+                            <th>العنوان</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in buildings %}
+                        <tr>
+                            <td>{{ b.building_id }}</td>
+                            <td class="fw-bold text-primary">{{ b.building_name }}</td>
+                            <td><span class="badge bg-secondary-subtle text-secondary">{{ b.building_type }}</span></td>
+                            <td class="text-muted">{{ b.address or '—' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center py-4 text-muted">لا توجد عقارات مسجلة</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+        <div class="card card-stat h-100">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold mb-0 text-success"><i class="bi bi-wallet2 me-2"></i>الخزائن والبنوك</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>اسم الخزينة</th>
+                            <th>الحالة</th>
+                            <th>الرصيد الافتتاحي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in treasuries %}
+                        <tr>
+                            <td>{{ t.treasury_id }}</td>
+                            <td class="fw-bold">{{ t.treasury_name }}</td>
+                            <td>
+                                {% if t.is_default %}
+                                <span class="badge bg-success">رئيسية</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">فرعية</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold text-success">{{ t.start_balance }} ج.م</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center py-4 text-muted">لا توجد خزائن</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal إضافة عقار -->
+<div class="modal fade" id="addBuildingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">إضافة عقار جديد</h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="buildingForm">
+                    <div class="mb-3">
+                        <label class="form-label">اسم العقار / العمارة</label>
+                        <input type="text" class="form-control" name="building_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">نوع العقار</label>
+                        <select class="form-select" name="building_type">
+                            <option value="عمارة">عمارة سكنية</option>
+                            <option value="برج">برج</option>
+                            <option value="جراج">جراج</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">العنوان</label>
+                        <input type="text" class="form-control" name="address">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-modern">حفظ العقار</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal إضافة خزينة -->
+<div class="modal fade" id="addTreasuryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">إضافة خزينة / حساب بنك</h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="treasuryForm">
+                    <div class="mb-3">
+                        <label class="form-label">اسم الخزينة</label>
+                        <input type="text" class="form-control" name="treasury_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الرصيد الافتتاحي</label>
+                        <input type="number" step="0.01" class="form-control" name="start_balance" value="0.0">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 btn-modern">إنشاء الخزينة</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('buildingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        building_name: e.target.building_name.value,
+        building_type: e.target.building_type.value,
+        address: e.target.address.value
+    };
+    const res = await fetch('/buildings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    if (res.ok) window.location.reload();
+});
+
+document.getElementById('treasuryForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        treasury_name: e.target.treasury_name.value,
+        start_balance: parseFloat(e.target.start_balance.value || 0)
+    };
+    const res = await fetch('/treasuries', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    if (res.ok) window.location.reload();
+});
+</script>
+{% endblock %}

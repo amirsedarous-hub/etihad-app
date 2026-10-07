@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}تسجيل الالتزامات والتحصيل | AccessPro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1">تسجيل الالتزامات والتحصيل</h4>
+        <p class="text-muted small mb-0">إصدار الاشتراكات، السداد الفردي والجماعي، وإصدار الإيصالات</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-modern" data-bs-toggle="modal" data-bs-target="#newCollectionModal">
+            <i class="bi bi-plus-circle"></i> إضافة التزام جديد
+        </button>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- قائمة الالتزامات المسجلة -->
+    <div class="col-12 col-lg-4">
+        <div class="card card-stat">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-list-task me-2"></i>قائمة الالتزامات</h6>
+            </div>
+            <div class="list-group list-group-flush" id="collectionsList">
+                {% for c in collections %}
+                <button class="list-group-item list-group-item-action p-3" onclick="loadCollectionItems({{ c.collection_id }})">
+                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                        <strong class="text-primary">{{ c.building.building_name if c.building else '' }}</strong>
+                        <span class="badge bg-light text-dark">#{{ c.collection_id }}</span>
+                    </div>
+                    <div class="text-muted small mb-1">{{ c.description or 'اشتراك شهري' }}</div>
+                    <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ c.date_.strftime('%Y-%m-%d') if c.date_ else '' }}</div>
+                </button>
+                {% else %}
+                <div class="text-center py-4 text-muted">لا توجد التزامات مسجلة</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول تفاصيل المطالبات والسداد للوحدات -->
+    <div class="col-12 col-lg-8">
+        <div class="card card-stat">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-people me-2"></i>مطالبات الوحدات</h6>
+                <div class="d-flex gap-2" id="actionButtons" style="display: none !important;">
+                    <button class="btn btn-sm btn-success btn-modern" onclick="payAllSelected()">
+                        <i class="bi bi-check2-all"></i> السداد للكل
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary btn-modern" onclick="window.print()">
+                        <i class="bi bi-printer"></i> طباعة الإيصالات
+                    </button>
+                </div>
+            </div>
+            
+            <!-- شريط الفلاتر -->
+            <div class="p-3 border-bottom bg-light d-flex gap-2 flex-wrap">
+                <select class="form-select form-select-sm w-auto" id="statusFilter" onchange="filterItems()">
+                    <option value="all">حالة السداد: الكل</option>
+                    <option value="unpaid">غير مسدد ❌</option>
+                    <option value="paid">مسدد بالكامل ✔️</option>
+                </select>
+                <input type="text" class="form-control form-control-sm w-auto" id="unitSearch" placeholder="بحث برقم الوحدة أو الشاغل..." oninput="filterItems()">
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="detailsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الوحدة</th>
+                            <th>الشاغل</th>
+                            <th>الدور</th>
+                            <th>المطلوب</th>
+                            <th>المدفوع</th>
+                            <th>المتبقي</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailsBody">
+                        <tr><td colspan="8" class="text-center py-5 text-muted">اختر التزاماً من القائمة الجانبية لعرض مطالباته</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal إضافة التزام وتوليد مطالبات -->
+<div class="modal fade" id="newCollectionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">إضافة التزام ومطالبة جديدة</h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="collectionGenForm">
+                    <div class="mb-3">
+                        <label class="form-label">العقار المستهدف</label>
+                        <select class="form-select" name="building_id" required>
+                            {% for b in buildings %}
+                            <option value="{{ b.building_id }}">{{ b.building_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">نوع التحصيل / البند</label>
+                        <select class="form-select" name="collection_type_id" required>
+                            {% for ct in col_types %}
+                            <option value="{{ ct.collection_type_id }}">{{ ct.collection_type }} (افتراضي: {{ ct.default_amount }} ج.م)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">البيان / الوصف</label>
+                        <input type="text" class="form-control" name="description" placeholder="مثال: صيانة شهر مايو 2026">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-modern">
+                        <i class="bi bi-lightning-charge-fill me-1"></i> توليد المطالبات لجميع الوحدات
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentCollectionId = null;
+let currentItems = [];
+
+async function loadCollectionItems(colId) {
+    currentCollectionId = colId;
+    const res = await fetch(`/collection-items/${colId}`);
+    currentItems = await res.json();
+    document.getElementById('actionButtons').style.setProperty('display', 'flex', 'important');
+    renderItems(currentItems);
+}
+
+function renderItems(items) {
+    const tbody = document.getElementById('detailsBody');
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد مطالبات</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(it => `
+        <tr>
+            <td class="fw-bold">${it.flat_nu}</td>
+            <td class="text-primary fw-bold">${it.owner_name}</td>
+            <td>${it.role_name}</td>
+            <td class="fw-bold">${it.amount.toFixed(2)}</td>
+            <td class="text-success fw-bold">${it.paid.toFixed(2)}</td>
+            <td class="text-danger fw-bold">${it.rest.toFixed(2)}</td>
+            <td>
+                ${it.paid_ok 
+                    ? '<span class="badge bg-success"><i class="bi bi-check-lg"></i> مسدد</span>' 
+                    : '<span class="badge bg-danger"><i class="bi bi-x-lg"></i> معلق</span>'}
+            </td>
+            <td>
+                ${!it.paid_ok ? `
+                    <button class="btn btn-sm btn-success" onclick="payItemFull(${it.id})">
+                        <i class="bi bi-cash me-1"></i> سداد
+                    </button>
+                ` : `
+                    <span class="text-muted small"><i class="bi bi-receipt"></i> تم السداد</span>
+                `}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterItems() {
+    const status = document.getElementById('statusFilter').value;
+    const search = document.getElementById('unitSearch').value.toLowerCase();
+    
+    const filtered = currentItems.filter(it => {
+        const matchesStatus = status === 'all' || (status === 'paid' && it.paid_ok) || (status === 'unpaid' && !it.paid_ok);
+        const matchesSearch = it.owner_name.toLowerCase().includes(search) || it.flat_nu.toLowerCase().includes(search);
+        return matchesStatus && matchesSearch;
+    });
+    renderItems(filtered);
+}
+
+async function payItemFull(detailId) {
+    if (!confirm('تأكيد سداد المبلغ المتبقي بالكامل؟')) return;
+    const res = await fetch(`/collections/pay-full/${detailId}`, { method: 'POST' });
+    if (res.ok) {
+        loadCollectionItems(currentCollectionId);
+    }
+}
+
+async function payAllSelected() {
+    if (!currentCollectionId) return;
+    if (!confirm('هل أنت متأكد من تسوية وسداد كافة الوحدات دفعة واحدة؟')) return;
+    const res = await fetch(`/collections/pay-all-units/${currentCollectionId}`, { method: 'POST' });
+    if (res.ok) {
+        loadCollectionItems(currentCollectionId);
+    }
+}
+
+document.getElementById('collectionGenForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        building_id: parseInt(e.target.building_id.value),
+        collection_type_id: parseInt(e.target.collection_type_id.value),
+        description: e.target.description.value
+    };
+    const res = await fetch('/collections/generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        window.location.reload();
+    } else {
+        const err = await res.json();
+        alert(err.detail || 'حدث خطأ أثناء توليد الالتزام');
+    }
+});
+</script>
+{% endblock %}
