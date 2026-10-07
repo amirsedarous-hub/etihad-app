@@ -7,7 +7,3 @@
 
 fastapi
 uvicorn
-sqlalchemy
-jinja2
-pydantic
-python-multipart
